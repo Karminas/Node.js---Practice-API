@@ -1,55 +1,72 @@
-const asyncErrorHandler = require ('express-async-handler')
-const contactModel = require ('../models/contactModel');
+const asyncErrorHandler = require ('express-async-handler'); 
+const User = require ("../models/userModel")
+const ByCrypt = require ("bcryptjs");
+const jwt = require ("jsonwebtoken");
 
-const getUsers = asyncErrorHandler (async (req, res) => {
-    const contacts = await contactModel.find();
-    res.status(200).json(contacts);
-});
-
-const getUserById = asyncErrorHandler (async(req, res) => {
-    const contact = await contactModel.findById(req.params.id);
-    if (!contact){
-        res.status(404);
-        throw new Error('Contact not found');
-    }
-    res.status(200).json(contact);
-});
-
-const createNewUser = asyncErrorHandler (async(req, res) => {
-    const {name, email, phone} = req.body;
-    if (!name || !email || !phone){
+const register = asyncErrorHandler ( async (req, res) => {
+    const {userName, email, password} = req.body;
+    if (!userName || !email || !password){
         res.status(400);
-        throw new Error ('All fields are mandatory!');
+        throw new Error("All fields are mandatory");
     }
-    const addedContact = await contactModel.create({name, email, phone});
-    res.status(201).json(addedContact);
+
+    const userAvailable = await User.findOne({email}); 
+    if (userAvailable){
+        res.status(400);
+        throw new Error("This email already exists");
+    }
+
+    const hashedPassword = await ByCrypt.hash(password, 10);
+
+    const userCreated = await User.create({
+        userName, 
+        email,
+        password: hashedPassword,
+    });
+
+    if (userCreated){
+        console.log('User successfully created');
+        res.status(201).json({_id:userCreated._id, email: userCreated.email});
+    }
+    else{
+        res.status(400);
+        throw new Error ("User data is not valid.");
+    }
 });
 
-const updateUserById = asyncErrorHandler (async(req, res) => {
-    const foundUser = await contactModel.findById(req.params.id);
-    const {name, email, phone} = req.body;
-    if (!foundUser){
-        res.status(404);
-        throw new Error("Contact not found");
+const login = asyncErrorHandler ( async (req, res) => {
+    const { email, password } = req.body;
+    
+    if (!email, !password){
+        res.status(400);
+        throw new Error("All fields are mandatory");
     }
-    const updatedUser = await contactModel.findByIdAndUpdate(req.params.id, req.body, {new:true});
-    res.status(200).json(updatedUser);
+
+    const foundUser = await User.findOne({email});
+
+    //Compare user with hash password
+    if (foundUser && (await ByCrypt.compare(password, foundUser.password))){
+
+        const accessToken = jwt.sign({
+            user:{
+                _id: foundUser._id,
+                userName: foundUser.userName,
+                email: foundUser.email,
+            }
+        }, process.env.ACCESS_TOKEN_SECRET,
+        {expiresIn:"1m"});
+
+        res.status(200).json({accessToken}); 
+    }else{
+        res.status(401);
+        throw new Error(" Email or password is not valid.");
+    }
 });
 
-const deleteUserById = asyncErrorHandler (async(req, res) => {
-    const foundContact = await contactModel.findByIdAndDelete(req.params.id);
-    if (!foundContact){
-        res.status(404);
-        throw new Error("Contact not found");
-    }
-    res.status(200).json (foundContact);
+//@Desc Current user info
+//
+const current = asyncErrorHandler(async(req, res) => {
+    res.status(200).json('current');
 });
 
-module.exports= {   
-    getUsers, 
-    getUserById,
-    createNewUser,
-    updateUserById,
-    deleteUserById 
-    };
-
+module.exports = { register, login, current };

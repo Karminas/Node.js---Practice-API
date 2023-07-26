@@ -1,11 +1,11 @@
-const express = require('express');
-const router = express.Router();
-const { getUsers, getUserById, createNewUser, updateUserById, deleteUserById } = require('../controllers/userController');
+const express = require ('express');
+const userRouter = express.Router();
+const validateToken = require ("../middleware/validateTokenHandler");
+const { register, login, current } = require ('../controllers/userController');
 
-router.route('/contacts').get(getUsers);
-router.route('/contacts/:id').get(getUserById);
-router.route('/contacts').post(createNewUser);
-router.route('/contacts/:id').put(updateUserById);
-router.route('/contacts/:id').delete(deleteUserById);
 
-module.exports = router;
+userRouter.route('/register').post(register);
+userRouter.route('/login').post(login);
+userRouter.get('/current', validateToken, current);
+
+module.exports = userRouter;

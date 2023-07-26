@@ -8,6 +8,7 @@ const PORT = process.env.PORT;
 
 connectDb();
 app.use(express.json());
+app.use('/api/v1/', require('./routers/contactsRouter'));
 app.use('/api/v1/', require('./routers/userRouter'));
 app.use(errorHandler);
 
