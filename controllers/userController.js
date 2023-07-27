@@ -56,6 +56,7 @@ const login = asyncErrorHandler ( async (req, res) => {
         }, process.env.ACCESS_TOKEN_SECRET,
         {expiresIn:"1m"});
 
+        console.log(foundUser);
         res.status(200).json({accessToken}); 
     }else{
         res.status(401);
